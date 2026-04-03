@@ -1,98 +1,221 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useCallback } from 'react';
+import {
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useConversations } from '@/store/conversations';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+import type { Conversation } from '@/types/workout';
 
-export default function HomeScreen() {
+function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function ConversationRow({ item, onPress }: { item: Conversation; onPress: () => void }) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const lastMessage = item.messages[item.messages.length - 1];
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <TouchableOpacity
+      style={[
+        styles.row,
+        { backgroundColor: Colors[colorScheme].background },
+      ]}
+      activeOpacity={0.6}
+      onPress={onPress}>
+      <View style={[styles.avatar, { backgroundColor: Colors[colorScheme].tint + '20' }]}>
+        <IconSymbol name="figure.run" size={22} color={Colors[colorScheme].tint} />
+      </View>
+      <View style={styles.rowContent}>
+        <View style={styles.rowHeader}>
+          <ThemedText style={styles.rowTitle} numberOfLines={1}>
+            {item.title}
+          </ThemedText>
+          <ThemedText style={styles.rowTime}>
+            {formatRelativeTime(item.updatedAt)}
+          </ThemedText>
+        </View>
+        {lastMessage && (
+          <ThemedText style={styles.rowPreview} numberOfLines={2}>
+            {lastMessage.content}
+          </ThemedText>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+export default function ChatsScreen() {
+  const { conversations, createConversation } = useConversations();
+  const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+
+  const handleNewChat = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const id = createConversation();
+    router.push(`/chat/${id}`);
+  }, [createConversation, router]);
+
+  const handleSelectChat = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push(`/chat/${id}`);
+    },
+    [router]
+  );
+
+  return (
+    <ThemedView style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'ChatFit',
+          headerLargeTitle: true,
+        }}
+      />
+
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon="square.and.pencil"
+          onPress={handleNewChat}
+        />
+      </Stack.Toolbar>
+
+      {conversations.length === 0 ? (
+        <View style={styles.empty}>
+          <View style={[styles.emptyIcon, { backgroundColor: Colors[colorScheme].tint + '15' }]}>
+            <IconSymbol name="bubble.left.and.bubble.right.fill" size={48} color={Colors[colorScheme].tint} />
+          </View>
+          <ThemedText style={styles.emptyTitle}>No Conversations Yet</ThemedText>
+          <ThemedText style={styles.emptySubtitle}>
+            Tap the compose button to start a new workout chat
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.emptyButton, { backgroundColor: Colors[colorScheme].tint }]}
+            onPress={handleNewChat}
+            activeOpacity={0.8}>
+            <ThemedText style={styles.emptyButtonText}>Start a Chat</ThemedText>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ConversationRow
+              item={item}
+              onPress={() => handleSelectChat(item.id)}
+            />
+          )}
+          contentContainerStyle={styles.list}
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: Colors[colorScheme].icon + '30' }]} />
+          )}
+        />
+      )}
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  list: {
+    paddingBottom: 20,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
-  stepContainer: {
-    gap: 8,
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowContent: {
+    flex: 1,
+  },
+  rowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
+  },
+  rowTime: {
+    fontSize: 13,
+    opacity: 0.5,
+  },
+  rowPreview: {
+    fontSize: 14,
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 72,
+  },
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
     marginBottom: 8,
+    textAlign: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptySubtitle: {
+    fontSize: 15,
+    opacity: 0.6,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  emptyButton: {
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 25,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
