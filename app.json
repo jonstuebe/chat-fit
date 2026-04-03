@@ -11,16 +11,16 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/YOUR_PROJECT_ID"
+      "url": "https://u.expo.dev/3d3b8c54-314b-4da6-8bfd-115eba4c03ab"
     },
     "extra": {
       "eas": {
-        "projectId": "YOUR_PROJECT_ID"
+        "projectId": "3d3b8c54-314b-4da6-8bfd-115eba4c03ab"
       }
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.chatfit.app"
+      "bundleIdentifier": "com.jonstuebe.chatfit"
     },
     "plugins": [
       "expo-router",
