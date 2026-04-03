@@ -7,6 +7,17 @@
     "icon": "./assets/images/icon.png",
     "scheme": "chatfit",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_PROJECT_ID"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID"
+      }
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.chatfit.app"
