@@ -2,11 +2,12 @@ import React from 'react';
 import {
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { useKeepAwake } from 'expo-keep-awake';
+import { Host, Toggle, Button } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize } from '@expo/ui/swift-ui/modifiers';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -15,99 +16,55 @@ import { useConversations } from '@/store/conversations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { ExerciseTimer } from '@/components/exercise-timer';
-import type { Exercise, WorkoutPhase } from '@/types/workout';
+import type { Exercise } from '@/types/workout';
 
 function ExerciseRow({
   exercise,
   phaseId,
   onToggle,
-  tint,
 }: {
   exercise: Exercise;
   phaseId: string;
   onToggle: (phaseId: string, exerciseId: string) => void;
-  tint: string;
 }) {
+  const detail =
+    exercise.type === 'timed'
+      ? `${exercise.duration}s`
+      : `${exercise.sets} × ${exercise.reps} reps`;
+
   return (
-    <TouchableOpacity
-      style={[styles.exerciseRow, exercise.completed && styles.exerciseCompleted]}
-      activeOpacity={0.7}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onToggle(phaseId, exercise.id);
-      }}>
-      <View style={[styles.checkbox, exercise.completed && { backgroundColor: tint, borderColor: tint }]}>
-        {exercise.completed && (
-          <IconSymbol name="checkmark" size={14} color="#fff" />
-        )}
-      </View>
-      <View style={styles.exerciseInfo}>
-        <ThemedText
-          style={[
-            styles.exerciseName,
-            exercise.completed && styles.exerciseNameCompleted,
-          ]}>
-          {exercise.name}
+    <View style={styles.exerciseRow}>
+      <Host matchContents>
+        <Toggle
+          isOn={exercise.completed}
+          onIsOnChange={() => onToggle(phaseId, exercise.id)}
+          label={exercise.name}
+        />
+      </Host>
+      <View style={styles.exerciseDetails}>
+        <ThemedText style={[styles.exerciseDetail, exercise.completed && styles.completedText]}>
+          {detail}
         </ThemedText>
-        <ThemedText style={styles.exerciseDetail}>
-          {exercise.type === 'timed'
-            ? `${exercise.duration}s`
-            : `${exercise.sets} × ${exercise.reps} reps`}
-        </ThemedText>
-        <ThemedText style={styles.exerciseDescription}>
+        <ThemedText style={[styles.exerciseDescription, exercise.completed && styles.completedText]}>
           {exercise.description}
         </ThemedText>
       </View>
       {exercise.type === 'timed' && !exercise.completed && (
         <ExerciseTimer
           duration={exercise.duration || 0}
-          onComplete={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            onToggle(phaseId, exercise.id);
-          }}
+          onComplete={() => onToggle(phaseId, exercise.id)}
         />
       )}
-    </TouchableOpacity>
-  );
-}
-
-function PhaseSection({
-  phase,
-  onToggle,
-  tint,
-}: {
-  phase: WorkoutPhase;
-  onToggle: (phaseId: string, exerciseId: string) => void;
-  tint: string;
-}) {
-  const completed = phase.exercises.filter((e) => e.completed).length;
-  const total = phase.exercises.length;
-
-  return (
-    <View style={styles.phaseSection}>
-      <View style={styles.phaseHeader}>
-        <ThemedText style={styles.phaseName}>{phase.name}</ThemedText>
-        <ThemedText style={[styles.phaseCount, { color: tint }]}>
-          {completed}/{total}
-        </ThemedText>
-      </View>
-      {phase.exercises.map((exercise) => (
-        <ExerciseRow
-          key={exercise.id}
-          exercise={exercise}
-          phaseId={phase.id}
-          onToggle={onToggle}
-          tint={tint}
-        />
-      ))}
     </View>
   );
 }
 
 export default function WorkoutScreen() {
   const { activeWorkout, toggleExerciseComplete, setActiveWorkout } = useConversations();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
   const tint = Colors[colorScheme].tint;
+
+  useKeepAwake();
 
   const totalExercises = activeWorkout
     ? activeWorkout.phases.reduce((sum, p) => sum + p.exercises.length, 0)
@@ -179,26 +136,37 @@ export default function WorkoutScreen() {
             </View>
           )}
 
-          {activeWorkout.phases.map((phase) => (
-            <PhaseSection
-              key={phase.id}
-              phase={phase}
-              onToggle={toggleExerciseComplete}
-              tint={tint}
-            />
-          ))}
+          {activeWorkout.phases.map((phase) => {
+            const phaseCompleted = phase.exercises.filter((e) => e.completed).length;
+            return (
+              <View key={phase.id} style={styles.phaseSection}>
+                <View style={styles.phaseHeader}>
+                  <ThemedText style={styles.phaseName}>{phase.name}</ThemedText>
+                  <ThemedText style={[styles.phaseCount, { color: tint }]}>
+                    {phaseCompleted}/{phase.exercises.length}
+                  </ThemedText>
+                </View>
+                {phase.exercises.map((exercise) => (
+                  <ExerciseRow
+                    key={exercise.id}
+                    exercise={exercise}
+                    phaseId={phase.id}
+                    onToggle={toggleExerciseComplete}
+                  />
+                ))}
+              </View>
+            );
+          })}
 
-          <TouchableOpacity
-            style={[styles.endButton, { borderColor: '#FF3B30' }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setActiveWorkout(null);
-            }}
-            activeOpacity={0.7}>
-            <ThemedText style={[styles.endButtonText, { color: '#FF3B30' }]}>
-              {isFinished ? 'Dismiss Workout' : 'End Workout'}
-            </ThemedText>
-          </TouchableOpacity>
+          <Host matchContents style={styles.endButtonHost}>
+            <Button
+              label={isFinished ? 'Dismiss Workout' : 'End Workout'}
+              systemImage="xmark.circle"
+              role="destructive"
+              modifiers={[buttonStyle('bordered'), controlSize('large')]}
+              onPress={() => setActiveWorkout(null)}
+            />
+          </Host>
         </ScrollView>
       )}
     </ThemedView>
@@ -284,57 +252,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    gap: 6,
+    marginBottom: 4,
   },
-  exerciseCompleted: {
-    opacity: 0.5,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#8888',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  exerciseNameCompleted: {
-    textDecorationLine: 'line-through',
+  exerciseDetails: {
+    paddingLeft: 4,
   },
   exerciseDetail: {
     fontSize: 14,
     opacity: 0.7,
-    marginTop: 2,
   },
   exerciseDescription: {
     fontSize: 13,
     opacity: 0.5,
-    marginTop: 4,
+    marginTop: 2,
     lineHeight: 18,
   },
-  endButton: {
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
+  completedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.4,
   },
-  endButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  endButtonHost: {
+    alignSelf: 'center',
+    marginTop: 12,
   },
   empty: {
     flex: 1,

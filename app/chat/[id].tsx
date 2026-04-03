@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Host, Button } from '@expo/ui/swift-ui';
+import { buttonStyle } from '@expo/ui/swift-ui/modifiers';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -29,7 +30,7 @@ function MessageBubble({
   onStartWorkout: (message: ChatMessage) => void;
 }) {
   const isUser = message.role === 'user';
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
 
   return (
     <View
@@ -45,8 +46,7 @@ function MessageBubble({
             : [
                 styles.assistantBubble,
                 {
-                  backgroundColor:
-                    colorScheme === 'dark' ? '#2C2C2E' : '#E9E9EB',
+                  backgroundColor: Colors[colorScheme].tertiaryBackground,
                 },
               ],
         ]}>
@@ -77,7 +77,7 @@ export default function ChatScreen() {
     conversations,
   } = useConversations();
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
   const tint = Colors[colorScheme].tint;
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -87,7 +87,6 @@ export default function ChatScreen() {
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed || !id) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     sendMessage(id, trimmed);
     setText('');
   }, [text, id, sendMessage]);
@@ -95,7 +94,6 @@ export default function ChatScreen() {
   const handleStartWorkout = useCallback(
     (message: ChatMessage) => {
       if (message.workout) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setActiveWorkout(message.workout, id);
         router.navigate('/(tabs)/workout');
       }
@@ -115,7 +113,7 @@ export default function ChatScreen() {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Chat' }} />
-        <View style={styles.empty}>
+        <View style={styles.notFound}>
           <ThemedText>Conversation not found</ThemedText>
         </View>
       </ThemedView>
@@ -150,7 +148,7 @@ export default function ChatScreen() {
         keyboardVerticalOffset={100}>
         {conversation.messages.length === 0 ? (
           <View style={styles.welcomeContainer}>
-            <View style={[styles.welcomeIcon, { backgroundColor: tint + '15' }]}>
+            <View style={[styles.welcomeIcon, { backgroundColor: tint + '12' }]}>
               <IconSymbol name="figure.run" size={40} color={tint} />
             </View>
             <ThemedText style={styles.welcomeTitle}>{"What's your workout today?"}</ThemedText>
@@ -159,23 +157,19 @@ export default function ChatScreen() {
             </ThemedText>
             <View style={styles.suggestions}>
               {[
-                '20 min HIIT cardio burn',
-                'Upper body strength',
-                'Quick core workout',
-                'Yoga stretch & relax',
+                { label: '20 min HIIT cardio burn', icon: 'flame' as const },
+                { label: 'Upper body strength', icon: 'figure.arms.open' as const },
+                { label: 'Quick core workout', icon: 'figure.core.training' as const },
+                { label: 'Yoga stretch & relax', icon: 'figure.mind.and.body' as const },
               ].map((suggestion) => (
-                <TouchableOpacity
-                  key={suggestion}
-                  style={[styles.suggestionChip, { borderColor: tint + '40' }]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    sendMessage(id, suggestion);
-                  }}
-                  activeOpacity={0.7}>
-                  <ThemedText style={[styles.suggestionText, { color: tint }]}>
-                    {suggestion}
-                  </ThemedText>
-                </TouchableOpacity>
+                <Host key={suggestion.label} matchContents>
+                  <Button
+                    label={suggestion.label}
+                    systemImage={suggestion.icon}
+                    onPress={() => sendMessage(id, suggestion.label)}
+                    modifiers={[buttonStyle('bordered')]}
+                  />
+                </Host>
               ))}
             </View>
           </View>
@@ -200,7 +194,7 @@ export default function ChatScreen() {
           style={[
             styles.inputContainer,
             {
-              borderTopColor: Colors[colorScheme].icon + '30',
+              borderTopColor: Colors[colorScheme].separator,
               backgroundColor: Colors[colorScheme].background,
             },
           ]}>
@@ -208,7 +202,7 @@ export default function ChatScreen() {
             style={[
               styles.input,
               {
-                backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F2F2F7',
+                backgroundColor: Colors[colorScheme].secondaryBackground,
                 color: Colors[colorScheme].text,
               },
             ]}
@@ -304,7 +298,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-  empty: {
+  notFound: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -331,7 +325,7 @@ const styles = StyleSheet.create({
   },
   welcomeSubtitle: {
     fontSize: 15,
-    opacity: 0.6,
+    opacity: 0.5,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -341,15 +335,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-  },
-  suggestionChip: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  suggestionText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
 });

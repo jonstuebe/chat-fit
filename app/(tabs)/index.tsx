@@ -6,7 +6,8 @@ import {
   View,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import { Host, Button } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize } from '@expo/ui/swift-ui/modifiers';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -28,7 +29,7 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 function ConversationRow({ item, onPress }: { item: Conversation; onPress: () => void }) {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
   const lastMessage = item.messages[item.messages.length - 1];
 
   return (
@@ -39,7 +40,7 @@ function ConversationRow({ item, onPress }: { item: Conversation; onPress: () =>
       ]}
       activeOpacity={0.6}
       onPress={onPress}>
-      <View style={[styles.avatar, { backgroundColor: Colors[colorScheme].tint + '20' }]}>
+      <View style={[styles.avatar, { backgroundColor: Colors[colorScheme].tint + '15' }]}>
         <IconSymbol name="figure.run" size={22} color={Colors[colorScheme].tint} />
       </View>
       <View style={styles.rowContent}>
@@ -57,6 +58,7 @@ function ConversationRow({ item, onPress }: { item: Conversation; onPress: () =>
           </ThemedText>
         )}
       </View>
+      <IconSymbol name="chevron.right" size={14} color={Colors[colorScheme].icon} />
     </TouchableOpacity>
   );
 }
@@ -64,17 +66,15 @@ function ConversationRow({ item, onPress }: { item: Conversation; onPress: () =>
 export default function ChatsScreen() {
   const { conversations, createConversation } = useConversations();
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
 
   const handleNewChat = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const id = createConversation();
     router.push(`/chat/${id}`);
   }, [createConversation, router]);
 
   const handleSelectChat = useCallback(
     (id: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push(`/chat/${id}`);
     },
     [router]
@@ -99,19 +99,21 @@ export default function ChatsScreen() {
 
       {conversations.length === 0 ? (
         <View style={styles.empty}>
-          <View style={[styles.emptyIcon, { backgroundColor: Colors[colorScheme].tint + '15' }]}>
+          <View style={[styles.emptyIcon, { backgroundColor: Colors[colorScheme].tint + '12' }]}>
             <IconSymbol name="bubble.left.and.bubble.right.fill" size={48} color={Colors[colorScheme].tint} />
           </View>
           <ThemedText style={styles.emptyTitle}>No Conversations Yet</ThemedText>
           <ThemedText style={styles.emptySubtitle}>
             Tap the compose button to start a new workout chat
           </ThemedText>
-          <TouchableOpacity
-            style={[styles.emptyButton, { backgroundColor: Colors[colorScheme].tint }]}
-            onPress={handleNewChat}
-            activeOpacity={0.8}>
-            <ThemedText style={styles.emptyButtonText}>Start a Chat</ThemedText>
-          </TouchableOpacity>
+          <Host matchContents style={styles.emptyButtonHost}>
+            <Button
+              label="Start a Chat"
+              systemImage="plus.bubble"
+              onPress={handleNewChat}
+              modifiers={[buttonStyle('borderedProminent'), controlSize('large')]}
+            />
+          </Host>
         </View>
       ) : (
         <FlatList
@@ -125,7 +127,7 @@ export default function ChatsScreen() {
           )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: Colors[colorScheme].icon + '30' }]} />
+            <View style={[styles.separator, { backgroundColor: Colors[colorScheme].separator }]} />
           )}
         />
       )}
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
   },
   rowPreview: {
     fontSize: 14,
-    opacity: 0.6,
+    opacity: 0.5,
     marginTop: 2,
   },
   separator: {
@@ -203,19 +205,12 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 15,
-    opacity: 0.6,
+    opacity: 0.5,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
-  emptyButton: {
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 25,
-  },
-  emptyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  emptyButtonHost: {
+    alignSelf: 'center',
   },
 });

@@ -1,4 +1,6 @@
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Host, Button } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize } from '@expo/ui/swift-ui/modifiers';
 
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -13,7 +15,7 @@ export function WorkoutCard({
   workout: Workout;
   onStart: () => void;
 }) {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
   const tint = Colors[colorScheme].tint;
 
   const totalExercises = workout.phases.reduce(
@@ -27,7 +29,7 @@ export function WorkoutCard({
         styles.card,
         {
           backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#fff',
-          borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+          borderColor: colorScheme === 'dark' ? '#38383A' : '#E5E5EA',
         },
       ]}>
       <View style={styles.cardHeader}>
@@ -54,13 +56,14 @@ export function WorkoutCard({
         ))}
       </View>
 
-      <TouchableOpacity
-        style={[styles.startButton, { backgroundColor: tint }]}
-        onPress={onStart}
-        activeOpacity={0.8}>
-        <IconSymbol name="play.fill" size={16} color="#fff" />
-        <ThemedText style={styles.startButtonText}>Start Workout</ThemedText>
-      </TouchableOpacity>
+      <Host matchContents style={styles.buttonHost}>
+        <Button
+          label="Start Workout"
+          systemImage="play.fill"
+          onPress={onStart}
+          modifiers={[buttonStyle('borderedProminent'), controlSize('large')]}
+        />
+      </Host>
     </View>
   );
 }
@@ -121,17 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     opacity: 0.5,
   },
-  startButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  buttonHost: {
+    alignSelf: 'stretch',
   },
 });
